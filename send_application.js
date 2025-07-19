@@ -183,8 +183,8 @@ async function getJobName(page) {
   
   //-----------------------------------1.Login-----------------------------------------------
   //1.Auto Login
-  await page.fill('input[name="session_key"]', 'wattsoneric1@gmail.com');
-  await page.fill('input[name="session_password"]', 'Vishal.qsv123');
+  await page.fill('input[name="session_key"]', 'kkrajus777@gmail.com');
+  await page.fill('input[name="session_password"]', 'Kkraju**4');
   await page.click('button[type="submit"]');
   
   //2.Maual Login
@@ -203,7 +203,7 @@ async function getJobName(page) {
   await page.getByRole('combobox', { name: 'Search by title, skill, or' }).click();
   await page.waitForTimeout(3000)
 
-  await page.getByRole('combobox', { name: 'Search by title, skill, or' }).fill('Data Engineer');
+  await page.getByRole('combobox', { name: 'Search by title, skill, or' }).fill('FrontEnd Developer');
   await page.getByRole('combobox', { name: 'Search by title, skill, or' }).press('Enter');
   await page.waitForTimeout(5000)
 
@@ -224,7 +224,13 @@ async function getJobName(page) {
   while (true) {
     console.log(`Navigating to page ${currentPage}`);
 
-  const jobListings = await page.$$('//div[contains(@class,"display-flex job-card-container")]');
+  // Await for job cards to load
+    await page.waitForSelector('[data-job-id]', { timeout: 10000 }).catch(() => {
+    console.log('⚠️ No job cards found after waiting');
+  });
+
+  // const jobListings = await page.$$('//div[contains(@class,"display-flex job-card-container")]');
+  const jobListings = await page.$$('[data-job-id]');
   console.log(`Number of job listed on page ${currentPage}: ${jobListings.length}`);
 
   if (jobListings.length === 0) {
@@ -237,8 +243,28 @@ async function getJobName(page) {
     
     jobCounter++;
     console.log(`Processing job ${jobCounter} on page ${currentPage}`);
-    await job.click();
     
+   try {
+  // 🆕 Re-query the job element before using it
+  const refreshedJobs = await page.$$('[data-job-id]');
+  const freshJob = refreshedJobs[jobCounter - 1];
+
+  if (!freshJob) {
+    console.warn(`⚠️ Skipping job #${jobCounter}, element not found.`);
+    continue;
+  }
+
+  await freshJob.scrollIntoViewIfNeeded();
+  await freshJob.waitForElementState('visible', { timeout: 5000 });
+  await freshJob.click();
+
+  await page.waitForTimeout(1000 + Math.random() * 500); // optional random delay
+} catch (err) {
+  console.error(`❌ Error clicking job #${jobCounter}:`, err.message);
+  continue;
+}
+
+
     //----------------------------------CASE 1: ALREADY APPLIED----------------
     
     const alreadyApplied = await page.$('span.artdeco-inline-feedback__message:has-text("Applied")');
@@ -267,25 +293,43 @@ async function getJobName(page) {
     // -------------- Fill the Static Data ------------------- 
  
     // 1.Check for both possible email labels and select the email address
-    const emailLabel = await page.$('label:has-text("Email address")') || await page.$('label:has-text("Email")');
-    if (emailLabel) {
-      const emailInputId = await emailLabel.getAttribute('for');
-      await page.selectOption(`#${emailInputId}`, 'wattsoneric1@gmail.com');
+    try {
+  const emailLabel = await page.$('label:has-text("Email address")') || await page.$('label:has-text("Email")');
+  if (emailLabel) {
+    const emailInputId = await emailLabel.getAttribute('for');
+    const emailInput = await page.$(`#${emailInputId}`);
+
+    // Check if it is an <input> or <select>
+    const tag = await emailInput.evaluate(el => el.tagName.toLowerCase());
+
+    if (tag === 'input') {
+      await emailInput.fill('kkrajus777@gmail.com');
+    } else if (tag === 'select') {
+      await page.selectOption(`#${emailInputId}`, 'kkrajus777@gmail.com');
+    } else {
+      console.log('Email field exists but not actionable.');
     }
+  } else {
+    console.log('No Email label found. Skipping email step.');
+  }
+} catch (err) {
+  console.log('❌ Error while filling Email address field:', err.message);
+}
+
 
     // 2.Attempt to select the phone country code from the dropdown
     try {
       const phoneCountryLabel = await page.$('label:has-text("Phone country code")');
       if (phoneCountryLabel) {
         const phoneCountryInputId = await phoneCountryLabel.getAttribute('for');
-        await page.selectOption(`#${phoneCountryInputId}`, 'India (+91)');
+        await page.selectOption(`#${phoneCountryInputId}`, 'United States (+1)');
       }
     } catch (error) {
       console.log('Phone country code dropdown not found:', error.message);
     }
 
     // 3.Check for both possible phone labels and fill in the phone number
-    await fillPhoneNumber(page, '9390365005');
+    await fillPhoneNumber(page, '4695696257');
 
     // 4.Attach Resume
     //No need to attach resume every time its Auto Attached ; commented to reduce unnecessary WAIT

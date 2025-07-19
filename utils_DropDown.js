@@ -16,35 +16,67 @@ async function answerDropDown(page) {
 
   const dropdownElements = await page.$$(dropdownQuestionSelector);
   for (let dropdownElement of dropdownElements) {
-    const questionTextElement = await dropdownElement.$('label span:not(.visually-hidden)');
-    const questionText = (await questionTextElement.textContent()).trim();
-    console.log("Dropdown Question:", questionText);
+    try {
+      const questionTextElement = await dropdownElement.$('label span:not(.visually-hidden)');
+      if (!questionTextElement) continue;
 
-    const selectElement = await dropdownElement.$('select');
-    const options = await selectElement.$$('option');
+      const questionText = (await questionTextElement.textContent()).trim();
+      console.log("Dropdown Question:", questionText);
 
-    let answer = dropdownAnswersDatabase[questionText];
-
-    if (!answer) {
-      console.log(`Please select the answer for "${questionText}" via the browser UI.`);
-      await selectElement.focus();
-
-      // Polling loop to wait for user selection
-      let selectedValue = await selectElement.inputValue();
-      while (selectedValue === "Select an option") {
-        await page.waitForTimeout(500);  // Wait for 500ms
-        selectedValue = await selectElement.inputValue();
+      // Skip known non-interactive dropdown-like labels
+      if (questionText.toLowerCase().includes("email")) {
+        console.log(`⚠️ Skipping question "${questionText}" — looks like it's not a real dropdown.`);
+        continue;
       }
 
-      answer = selectedValue;
-      dropdownAnswersDatabase[questionText] = answer;
+      const selectElement = await dropdownElement.$('select');
+      if (!selectElement) {
+        console.log(`⚠️ No <select> element found for "${questionText}", skipping.`);
+        continue;
+      }
 
-      fs.writeFileSync(dropdownAnswersFilePath, JSON.stringify(dropdownAnswersDatabase, null, 2));
-    } else {
-      await selectElement.selectOption({ label: answer });
+      const tagName = await selectElement.evaluate(el => el.tagName.toLowerCase());
+      if (tagName !== 'select') {
+        console.log(`⚠️ Element for "${questionText}" is not a <select>, skipping.`);
+        continue;
+      }
+
+      const options = await selectElement.$$('option');
+      if (options.length === 0) {
+        console.log(`⚠️ No options available for "${questionText}", skipping.`);
+        continue;
+      }
+
+      let answer = dropdownAnswersDatabase[questionText];
+
+      if (!answer) {
+        console.log(`Please select the answer for "${questionText}" via the browser UI.`);
+        await selectElement.focus();
+
+        // Wait for user to select an option
+        let selectedValue = await selectElement.inputValue();
+        while (selectedValue === "Select an option") {
+          await page.waitForTimeout(500);
+          selectedValue = await selectElement.inputValue();
+        }
+
+        answer = selectedValue;
+        dropdownAnswersDatabase[questionText] = answer;
+        fs.writeFileSync(dropdownAnswersFilePath, JSON.stringify(dropdownAnswersDatabase, null, 2));
+      } else {
+        const success = await selectElement.selectOption({ label: answer });
+        if (success.length === 0) {
+          console.log(`⚠️ Could not select "${answer}" for "${questionText}". Option may be missing.`);
+        }
+      }
+
+    } catch (err) {
+      console.log(`❌ Error processing dropdown:`, err.message);
     }
   }
 }
+
+
 
 
 async function handleNewAnswerDropDown(questionText, page) {
