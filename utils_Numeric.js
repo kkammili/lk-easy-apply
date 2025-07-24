@@ -56,21 +56,15 @@ function saveAnswer(question, answer) {
 }
 
 async function handleNewQuestion(question) {
-  console.log(`No sufficiently similar question found for: "${question}". Please provide an answer.`);
-  const answer = await new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-    rl.question(`Answer for "${question}": `, (input) => {
-      rl.close();
-      resolve(input.trim());
-    });
-  });
+    console.log(`No sufficiently similar question found for: "${question}". Automatically returning 8.`);
 
-  saveAnswer(question, answer);
-  return answer;
+    const answer = '8';
+
+    saveAnswer(question, answer);
+
+    return answer;
 }
+
 
 // Function to calculate cosine similarity using TF-IDF, adjusted for specific keywords
 function calculateSimilarity(question1, question2) {

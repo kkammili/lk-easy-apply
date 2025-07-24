@@ -52,26 +52,30 @@ async function answerBinaryQuestions(page) {
 }
 
 async function handleNewQuestionBinary(questionText, page) {
-  let answer = '';
+    let answer = '';
 
-  while (answer !== 'Yes' && answer !== 'No') {
-    answer = await new Promise((resolve) => {
-      setTimeout(resolve, 1000);  // Wait for 1 second before checking again
-    });
+    const yesInput = await page.$('input[value="Yes"]');
+    const noInput = await page.$('input[value="No"]');
 
-    const yesInput = await page.$('input[value="Yes"]:checked');
-    const noInput = await page.$('input[value="No"]:checked');
+    const isYesChecked = await page.$('input[value="Yes"]:checked');
+    const isNoChecked = await page.$('input[value="No"]:checked');
 
-    if (yesInput) {
-      return 'Yes';
+    if (isYesChecked) {
+        answer = 'yes';
+    } else if (isNoChecked) {
+        answer = 'no';
+    } else if (yesInput) {
+        await yesInput.check(); // or click() depending on HTML
+        answer = 'yes';
     } else if (noInput) {
-      return 'No';
+        await noInput.check();
+        answer = 'no';
     } else {
-      console.log('No selection made via UI. Please provide "Yes" or "No" via terminal.');
+        console.log('No Yes/No options found on the page.');
+        answer = 'unknown';
     }
-  }
 
-  return answer.charAt(0).toUpperCase() + answer.slice(1);
+    return answer.charAt(0).toUpperCase() + answer.slice(1);
 }
 
 module.exports = {

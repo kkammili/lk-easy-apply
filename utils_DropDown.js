@@ -23,6 +23,11 @@ async function answerDropDown(page) {
       const questionText = (await questionTextElement.textContent()).trim();
       console.log("Dropdown Question:", questionText);
 
+      if (questionText.toLowerCase() === 'phone country code') {
+        console.log("skipping phone country code")
+        continue;
+      }
+
       // Skip known non-interactive dropdown-like labels
       if (questionText.toLowerCase().includes("email")) {
         console.log(`⚠️ Skipping question "${questionText}" — looks like it's not a real dropdown.`);
@@ -80,25 +85,28 @@ async function answerDropDown(page) {
 
 
 async function handleNewAnswerDropDown(questionText, page) {
-  let answer = '';
+    let answer = '';
 
-  while (!answer) {
-    answer = await new Promise((resolve) => {
-      setTimeout(resolve, 1000);  // Wait for 1 second before checking again
-    });
-
-    const dropdownElement = await page.$('select:checked');
+    const dropdownElement = await page.$('select');
     if (dropdownElement) {
-      const selectedOption = await dropdownElement.$('option:checked');
-      answer = await selectedOption.textContent();
-      return answer;
+        const firstOption = await dropdownElement.$('option:not([disabled]):not([hidden])');
+        if (firstOption) {
+            const optionValue = await firstOption.getAttribute('value');
+            await dropdownElement.selectOption(optionValue);
+            answer = await firstOption.textContent();
+        } else {
+            console.log('No valid option found in dropdown.');
+            answer = 'unknown';
+        }
     } else {
-      console.log('No selection made via UI. Please provide the dropdown answer via terminal.');
+        console.log('No dropdown element found on the page.');
+        answer = 'unknown';
     }
-  }
 
-  return answer;
+    // ❌ No capitalization
+    return answer;
 }
+
 module.exports = {
   answerDropDown,
   handleNewAnswerDropDown,

@@ -22,6 +22,11 @@ async function answerNumericQuestions(page) {
   for (let questionElement of questionElements) {
     const questionText = await questionElement.textContent();
     console.log("Question", questionText);
+      // Skip the 'Mobile phone number' question
+    if (questionText === "Mobile phone number") {
+        console.log("Skipping Mobile phone number (already filled)");
+        continue;
+    }
     // Find the corresponding input element using the 'for' attribute of the label
     const inputId = await questionElement.getAttribute("for");
     const answerElement = await page.$(`#${inputId}`);
@@ -134,36 +139,36 @@ async function handleNextOrReview(page) {
 }
 
 //--------- Main assist Funtions--------------
-async function fillPhoneNumber(page, phoneNumber) {
-  try {
-    let inputElement;
+// async function fillPhoneNumber(page, phoneNumber) {
+//   try {
+//     let inputElement;
 
-    // Try to fill "Mobile phone number"
-    try {
-      let labelName = "Mobile phone number";
-      inputElement = await page.getByLabel(labelName, { exact: true });
-      await inputElement.fill(phoneNumber);
-      console.log(`Filled ${labelName} with ${phoneNumber}`);
-      return; // Exit if successfully filled
-    } catch (error) {
-      console.log(
-        "Mobile phone number input field not found, trying Phone label."
-      );
-    }
+//     // Try to fill "Mobile phone number"
+//     try {
+//       let labelName = "Mobile phone number";
+//       inputElement = await page.getByLabel(labelName, { exact: true });
+//       await inputElement.fill(phoneNumber);
+//       console.log(`Filled ${labelName} with ${phoneNumber}`);
+//       return; // Exit if successfully filled
+//     } catch (error) {
+//       console.log(
+//         "Mobile phone number input field not found, trying Phone label."
+//       );
+//     }
 
-    // If "Mobile phone number" not found, try "Phone"
-    try {
-      let labelName = "Phone";
-      inputElement = await page.getByLabel(labelName, { exact: true });
-      await inputElement.fill(phoneNumber);
-      console.log(`Filled ${labelName} with ${phoneNumber}`);
-    } catch (error) {
-      console.log("Phone input field not found.");
-    }
-  } catch (error) {
-    console.error("Error filling phone number:", error);
-  }
-}
+//     // If "Mobile phone number" not found, try "Phone"
+//     try {
+//       let labelName = "Phone";
+//       inputElement = await page.getByLabel(labelName, { exact: true });
+//       await inputElement.fill(phoneNumber);
+//       console.log(`Filled ${labelName} with ${phoneNumber}`);
+//     } catch (error) {
+//       console.log("Phone input field not found.");
+//     }
+//   } catch (error) {
+//     console.error("Error filling phone number:", error);
+//   }
+// }
 
 async function getJobName(page) {
   try {
@@ -321,7 +326,7 @@ async function getJobName(page) {
 
         //----------------------------------CASE 3: APPLYING NOW ------------------
 
-        await page.waitForTimeout(3000);
+        // await page.waitForTimeout(3000);
 
         // -------------- Fill the Static Data -------------------
 
