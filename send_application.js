@@ -326,59 +326,59 @@ async function getJobName(page) {
         // -------------- Fill the Static Data -------------------
 
         // 1.Check for both possible email labels and select the email address
-        try {
-          const emailLabel =
-            (await page.$('label:has-text("Email address")')) ||
-            (await page.$('label:has-text("Email")'));
-          if (emailLabel) {
-            const emailInputId = await emailLabel.getAttribute("for");
-            const emailInput = await page.$(`#${emailInputId}`);
-
-            // Check if it is an <input> or <select>
-            const tag = await emailInput.evaluate((el) =>
-              el.tagName.toLowerCase()
-            );
-
-            if (tag === "input") {
-              await emailInput.fill("kkrajus777@gmail.com");
-            } else if (tag === "select") {
-              await page.selectOption(
-                `#${emailInputId}`,
-                "kkrajus777@gmail.com"
-              );
-            } else {
-              console.log("Email field exists but not actionable.");
-            }
-          } else {
-            console.log("No Email label found. Skipping email step.");
-          }
-        } catch (err) {
-          console.log(
-            "❌ Error while filling Email address field:",
-            err.message
-          );
-        }
+        // try {
+        //   const emailLabel =
+        //     (await page.$('label:has-text("Email address")')) ||
+        //     (await page.$('label:has-text("Email")'));
+        //   if (emailLabel) {
+        //     const emailInputId = await emailLabel.getAttribute("for");
+        //     const emailInput = await page.$(`#${emailInputId}`);
+        //
+        //     // Check if it is an <input> or <select>
+        //     const tag = await emailInput.evaluate((el) =>
+        //       el.tagName.toLowerCase()
+        //     );
+        //
+        //     if (tag === "input") {
+        //       await emailInput.fill("kkrajus777@gmail.com");
+        //     } else if (tag === "select") {
+        //       await page.selectOption(
+        //         `#${emailInputId}`,
+        //         "kkrajus777@gmail.com"
+        //       );
+        //     } else {
+        //       console.log("Email field exists but not actionable.");
+        //     }
+        //   } else {
+        //     console.log("No Email label found. Skipping email step.");
+        //   }
+        // } catch (err) {
+        //   console.log(
+        //     "❌ Error while filling Email address field:",
+        //     err.message
+        //   );
+        // }
 
         // 2.Attempt to select the phone country code from the dropdown
-        try {
-          const phoneCountryLabel = await page.$(
-            'label:has-text("Phone country code")'
-          );
-          if (phoneCountryLabel) {
-            const phoneCountryInputId = await phoneCountryLabel.getAttribute(
-              "for"
-            );
-            await page.selectOption(
-              `#${phoneCountryInputId}`,
-              "United States (+1)"
-            );
-          }
-        } catch (error) {
-          console.log("Phone country code dropdown not found:", error.message);
-        }
+        // try {
+        //   const phoneCountryLabel = await page.$(
+        //     'label:has-text("Phone country code")'
+        //   );
+        //   if (phoneCountryLabel) {
+        //     const phoneCountryInputId = await phoneCountryLabel.getAttribute(
+        //       "for"
+        //     );
+        //     await page.selectOption(
+        //       `#${phoneCountryInputId}`,
+        //       "United States (+1)"
+        //     );
+        //   }
+        // } catch (error) {
+        //   console.log("Phone country code dropdown not found:", error.message);
+        // }
 
         // 3.Check for both possible phone labels and fill in the phone number
-        await fillPhoneNumber(page, "4695696257");
+        // await fillPhoneNumber(page, "4695696257");
 
         // 4.Attach Resume
         //No need to attach resume every time its Auto Attached ; commented to reduce unnecessary WAIT
@@ -389,7 +389,7 @@ async function getJobName(page) {
       continue;
     }*/
 
-        await page.waitForTimeout(3000);
+        // await page.waitForTimeout(3000);
 
         //Handles all Templates Questions
         await answerQuestions(page);
