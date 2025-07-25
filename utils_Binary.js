@@ -1,4 +1,5 @@
 const fs = require('fs');
+const getAIAnswer = require('./ai_module')
 
 //-------------------------------------------------2.Binary response HANDLER-------------------------
 const binaryAnswersFilePath  = './binary_response.json';
@@ -52,30 +53,29 @@ async function answerBinaryQuestions(page) {
 }
 
 async function handleNewQuestionBinary(questionText, page) {
-    let answer = '';
+  let answer = '';
 
-    const yesInput = await page.$('input[value="Yes"]');
-    const noInput = await page.$('input[value="No"]');
+  const yesInput = await page.$('input[value="Yes"]');
+  const noInput = await page.$('input[value="No"]');
 
-    const isYesChecked = await page.$('input[value="Yes"]:checked');
-    const isNoChecked = await page.$('input[value="No"]:checked');
+  const isYesChecked = await page.$('input[value="Yes"]:checked');
+  const isNoChecked = await page.$('input[value="No"]:checked');
 
-    if (isYesChecked) {
-        answer = 'yes';
-    } else if (isNoChecked) {
-        answer = 'no';
-    } else if (yesInput) {
-        await yesInput.check(); // or click() depending on HTML
-        answer = 'yes';
-    } else if (noInput) {
-        await noInput.check();
-        answer = 'no';
-    } else {
-        console.log('No Yes/No options found on the page.');
-        answer = 'unknown';
-    }
+  if (isYesChecked) {
+    answer = 'Yes';
+  } else if (isNoChecked) {
+    answer = 'No';
+  } else if (yesInput || noInput) {
+    // Use AI to answer based on user profile
+    console.log('getting ai answer for new quetion', questionText)
+    answer = await getAIAnswer(questionText, ['Yes', 'No']);
+    console.log('ai answered', answer)
+  } else {
+    console.log('No Yes/No inputs found on the page.');
+    answer = 'unknown';
+  }
 
-    return answer.charAt(0).toUpperCase() + answer.slice(1);
+  return answer;
 }
 
 module.exports = {

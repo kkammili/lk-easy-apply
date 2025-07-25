@@ -1,4 +1,6 @@
 const fs = require('fs');
+const { getAIAnswer } = require('./ai_module');
+const userProfile = require('./profile');
 
 //-------------------------------------------------3.DropDown response HANDLER-------------------------
 const dropdownAnswersFilePath = './dropdown_response.json';
@@ -13,8 +15,8 @@ if (fs.existsSync(dropdownAnswersFilePath)) {
 
 async function answerDropDown(page) {
   const dropdownQuestionSelector = 'div[data-test-text-entity-list-form-component]';
-
   const dropdownElements = await page.$$(dropdownQuestionSelector);
+
   for (let dropdownElement of dropdownElements) {
     try {
       const questionTextElement = await dropdownElement.$('label span:not(.visually-hidden)');
@@ -23,89 +25,116 @@ async function answerDropDown(page) {
       const questionText = (await questionTextElement.textContent()).trim();
       console.log("Dropdown Question:", questionText);
 
-      if (questionText.toLowerCase() === 'phone country code') {
-        console.log("skipping phone country code")
-        continue;
-      }
-
-      // Skip known non-interactive dropdown-like labels
-      if (questionText.toLowerCase().includes("email")) {
-        console.log(`⚠️ Skipping question "${questionText}" — looks like it's not a real dropdown.`);
+      // Skip unnecessary questions
+      if (
+        questionText.toLowerCase() === 'phone country code' ||
+        questionText.toLowerCase().includes("email")
+      ) {
+        console.log(`⚠️ Skipping "${questionText}" — non-interactive or irrelevant.`);
         continue;
       }
 
       const selectElement = await dropdownElement.$('select');
       if (!selectElement) {
-        console.log(`⚠️ No <select> element found for "${questionText}", skipping.`);
+        console.warn(`⚠️ No <select> element found for "${questionText}", skipping.`);
         continue;
       }
 
       const tagName = await selectElement.evaluate(el => el.tagName.toLowerCase());
       if (tagName !== 'select') {
-        console.log(`⚠️ Element for "${questionText}" is not a <select>, skipping.`);
+        console.warn(`⚠️ Element for "${questionText}" is not a <select>, skipping.`);
         continue;
       }
 
-      const options = await selectElement.$$('option');
-      if (options.length === 0) {
-        console.log(`⚠️ No options available for "${questionText}", skipping.`);
+      const optionHandles = await selectElement.$$('option:not([disabled]):not([hidden])');
+      if (!optionHandles || optionHandles.length === 0) {
+        console.warn(`⚠️ No valid options for "${questionText}".`);
         continue;
       }
 
+      // Retrieve known answer or generate it
       let answer = dropdownAnswersDatabase[questionText];
 
       if (!answer) {
-        console.log(`Please select the answer for "${questionText}" via the browser UI.`);
-        await selectElement.focus();
+        const availableOptions = [];
 
-        // Wait for user to select an option
-        let selectedValue = await selectElement.inputValue();
-        while (selectedValue === "Select an option") {
-          await page.waitForTimeout(500);
-          selectedValue = await selectElement.inputValue();
+        for (const opt of optionHandles) {
+          const text = await opt.textContent();
+          if (text && !['select', 'choose'].includes(text.trim().toLowerCase())) {
+            availableOptions.push(text.trim());
+          }
         }
 
-        answer = selectedValue;
+        if (availableOptions.length === 0) {
+          console.warn(`⚠️ No selectable options found for "${questionText}".`);
+          continue;
+        }
+
+        // ✅ AI logic
+        answer = await getAIAnswer(questionText, availableOptions);
+        console.log(`💡 AI selected "${answer}" for "${questionText}"`);
+
         dropdownAnswersDatabase[questionText] = answer;
         fs.writeFileSync(dropdownAnswersFilePath, JSON.stringify(dropdownAnswersDatabase, null, 2));
-      } else {
-        const success = await selectElement.selectOption({ label: answer });
-        if (success.length === 0) {
-          console.log(`⚠️ Could not select "${answer}" for "${questionText}". Option may be missing.`);
-        }
+      }
+
+      const success = await selectElement.selectOption({ label: answer });
+      if (success.length === 0) {
+        console.warn(`⚠️ Could not select "${answer}" for "${questionText}".`);
       }
 
     } catch (err) {
-      console.log(`❌ Error processing dropdown:`, err.message);
+      console.error(`❌ Error processing dropdown "${questionText}":`, err.message);
     }
   }
 }
 
 
 
-
 async function handleNewAnswerDropDown(questionText, page) {
-    let answer = '';
+  let answer = '';
 
-    const dropdownElement = await page.$('select');
-    if (dropdownElement) {
-        const firstOption = await dropdownElement.$('option:not([disabled]):not([hidden])');
-        if (firstOption) {
-            const optionValue = await firstOption.getAttribute('value');
-            await dropdownElement.selectOption(optionValue);
-            answer = await firstOption.textContent();
-        } else {
-            console.log('No valid option found in dropdown.');
-            answer = 'unknown';
+  const dropdownElement = await page.$('select');
+  if (dropdownElement) {
+    // Get all valid options
+    const optionsHandles = await dropdownElement.$$(
+      'option:not([disabled]):not([hidden])'
+    );
+
+    if (optionsHandles.length > 0) {
+      const options = [];
+      for (let opt of optionsHandles) {
+        const text = await opt.textContent();
+        if (text && text.trim().toLowerCase() !== 'select') {
+          options.push(text.trim());
         }
-    } else {
-        console.log('No dropdown element found on the page.');
-        answer = 'unknown';
-    }
+      }
 
-    // ❌ No capitalization
-    return answer;
+      // 🔍 Ask AI for the best option
+      answer = await getAIAnswer(questionText, options);
+      console.log(`AI selected "${answer}" for question "${questionText}"`);
+
+      // Find and select the option matching the AI answer
+      const matchingOption = await dropdownElement.$(`option:text("${answer}")`);
+      if (matchingOption) {
+        const value = await matchingOption.getAttribute('value');
+        await dropdownElement.selectOption(value);
+      } else {
+        console.log(`AI-chosen answer "${answer}" not found in dropdown options.`);
+        answer = 'unknown';
+      }
+    } else {
+      console.log('No valid option found in dropdown.');
+      answer = 'unknown';
+    }
+  } else {
+    console.log('No dropdown element found on the page.');
+    answer = 'unknown';
+  }
+
+  return answer;
 }
+
 
 module.exports = {
   answerDropDown,
